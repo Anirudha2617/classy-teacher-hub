@@ -2,15 +2,18 @@ import { useState } from "react";
 import { Plus, User, BookOpen, CheckCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import PageHeader from "@/components/PageHeader";
+import AutocompleteInput from "@/components/AutocompleteInput";
 import { useToast } from "@/hooks/use-toast";
+import { searchBooks, searchStudents, lendBook } from "@/api/teacherApi";
 
 export default function LendBookPage() {
   const [studentId, setStudentId] = useState("");
   const [bookQuery, setBookQuery] = useState("");
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [selectedBook, setSelectedBook] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const { toast } = useToast();
@@ -18,10 +21,19 @@ export default function LendBookPage() {
   const handleLendBook = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!studentId.trim() || !bookQuery.trim()) {
+    if (!selectedStudent || !selectedBook) {
       toast({
         title: "Missing Information",
-        description: "Please enter both student ID and book information.",
+        description: "Please select both a student and a book.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (selectedBook.available_quantity === 0) {
+      toast({
+        title: "Book Unavailable",
+        description: "This book is currently out of stock.",
         variant: "destructive",
       });
       return;
@@ -29,22 +41,26 @@ export default function LendBookPage() {
 
     setLoading(true);
     
-    // Simulate API call
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const response = await lendBook({
+        student_id: selectedStudent.student_id,
+        book_id: selectedBook.id
+      });
       
       setSuccess(
-        `Book "${bookQuery}" successfully lent to student ${studentId}`
+        `Book "${selectedBook.title}" successfully lent to ${selectedStudent.student_name}`
       );
       
       toast({
         title: "Book Lent Successfully",
-        description: `${bookQuery} has been lent to ${studentId}`,
+        description: `${selectedBook.title} has been lent to ${selectedStudent.student_name}`,
       });
       
       // Reset form
       setStudentId("");
       setBookQuery("");
+      setSelectedStudent(null);
+      setSelectedBook(null);
       
       // Clear success message after 5 seconds
       setTimeout(() => setSuccess(null), 5000);
@@ -88,45 +104,60 @@ export default function LendBookPage() {
               <div className="space-y-2">
                 <Label htmlFor="studentId" className="flex items-center space-x-2">
                   <User className="w-4 h-4" />
-                  <span>Student ID</span>
+                  <span>Student Search</span>
                 </Label>
-                <Input
-                  id="studentId"
-                  type="text"
-                  placeholder="Enter student ID (e.g., S101)"
+                <AutocompleteInput
+                  type="student"
+                  placeholder="Search by student ID or name..."
                   value={studentId}
-                  onChange={(e) => setStudentId(e.target.value)}
-                  className="text-lg"
+                  onChange={setStudentId}
+                  onSelect={setSelectedStudent}
+                  searchFunction={searchStudents}
                 />
-                <p className="text-sm text-muted-foreground">
-                  Enter the student's unique ID to identify them
-                </p>
+                {selectedStudent && (
+                  <div className="p-3 bg-accent/20 rounded-lg border">
+                    <p className="font-medium text-foreground">{selectedStudent.student_name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedStudent.student_id} • Class {selectedStudent.class} • 
+                      {selectedStudent.books_borrowed} currently borrowed
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Book Search */}
               <div className="space-y-2">
                 <Label htmlFor="bookQuery" className="flex items-center space-x-2">
                   <BookOpen className="w-4 h-4" />
-                  <span>Book Information</span>
+                  <span>Book Search</span>
                 </Label>
-                <Input
-                  id="bookQuery"
-                  type="text"
-                  placeholder="Enter book title, author, or ISBN"
+                <AutocompleteInput
+                  type="book"
+                  placeholder="Search by title, author, or ISBN..."
                   value={bookQuery}
-                  onChange={(e) => setBookQuery(e.target.value)}
-                  className="text-lg"
+                  onChange={setBookQuery}
+                  onSelect={setSelectedBook}
+                  searchFunction={searchBooks}
                 />
-                <p className="text-sm text-muted-foreground">
-                  Search by book title, author name, or ISBN number
-                </p>
+                {selectedBook && (
+                  <div className="p-3 bg-accent/20 rounded-lg border">
+                    <p className="font-medium text-foreground">{selectedBook.title}</p>
+                    <p className="text-sm text-muted-foreground">
+                      by {selectedBook.author} • 
+                      <span className={selectedBook.available_quantity === 0 ? "text-destructive font-medium" : "text-accent"}>
+                        {selectedBook.available_quantity} available
+                      </span>
+                      {selectedBook.available_quantity === 0 && " (Out of Stock)"}
+                    </p>
+                  </div>
+                )}
               </div>
 
               <Button 
                 type="submit" 
                 className="w-full" 
                 size="lg"
-                disabled={loading}
+                disabled={loading || !selectedStudent || !selectedBook || selectedBook?.available_quantity === 0}
               >
                 {loading ? (
                   <>

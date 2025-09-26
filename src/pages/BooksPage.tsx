@@ -52,11 +52,19 @@ export default function BooksPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setBooks(mockBooks);
-      setLoading(false);
-    }, 1000);
+    const fetchBooks = async () => {
+      try {
+        const { getAllBooks } = await import("@/api/teacherApi");
+        const response = await getAllBooks();
+        setBooks(response.data);
+      } catch (error) {
+        console.error("Failed to fetch books:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchBooks();
   }, []);
 
   const filteredBooks = books.filter(book =>
@@ -81,11 +89,33 @@ export default function BooksPage() {
         <PageHeader title="Books" description="Manage your library collection" />
         <div className="p-6">
           <div className="space-y-4">
-            {[1, 2, 3].map(i => (
-              <Card key={i} className="animate-pulse">
+            {[1, 2, 3, 4, 5].map(i => (
+              <Card key={i}>
                 <CardContent className="p-6">
-                  <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
-                  <div className="h-3 bg-muted rounded w-1/2"></div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-16 bg-muted rounded-lg animate-pulse"></div>
+                      <div className="space-y-2">
+                        <div className="h-4 bg-muted rounded w-48 animate-pulse"></div>
+                        <div className="h-3 bg-muted rounded w-32 animate-pulse"></div>
+                        <div className="h-3 bg-muted rounded w-40 animate-pulse"></div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-6">
+                      <div className="text-center">
+                        <div className="w-8 h-8 bg-muted rounded animate-pulse mb-1"></div>
+                        <div className="h-2 bg-muted rounded w-8 animate-pulse"></div>
+                      </div>
+                      <div className="text-center">
+                        <div className="w-8 h-8 bg-muted rounded animate-pulse mb-1"></div>
+                        <div className="h-2 bg-muted rounded w-12 animate-pulse"></div>
+                      </div>
+                      <div className="text-center">
+                        <div className="w-8 h-8 bg-muted rounded animate-pulse mb-1"></div>
+                        <div className="h-2 bg-muted rounded w-12 animate-pulse"></div>
+                      </div>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             ))}
